@@ -82,9 +82,10 @@ export default function FileUploadForm() {
       setFile(null);
       if(fileInputRef.current) fileInputRef.current.value = ""; // Clear file input
 
-    } catch (error: any) {
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
       console.error("Upload error:", error);
-      setStatusMessage(`Error: ${error.message}`);
+      setStatusMessage(`Error: ${message}`);
     } finally {
       setIsUploading(false);
     }

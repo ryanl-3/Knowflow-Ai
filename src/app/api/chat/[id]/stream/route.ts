@@ -92,9 +92,7 @@ export async function POST(
           const index = pinecone.Index(process.env.PINECONE_INDEX_NAME!);
           const embeddings = new OpenAIEmbeddings({ openAIApiKey: process.env.OPENAI_API_KEY! });
 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const vectorStore = await PineconeStore.fromExistingIndex(embeddings, {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             pineconeIndex: index as any,
             namespace: `project-${projectId}`,
           });
