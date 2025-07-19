@@ -1,0 +1,153 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model - Represents a user account in our authentication system
+// This model stores both OAuth users (Google, GitHub, etc.) and credential users (email/password)
+model User {
+  id            String    @id @default(cuid())     // Primary key using CUID (Collision-resistant Unique Identifier)
+  name          String?                            // Optional user display name
+  email         String?   @unique                  // Email address with unique constraint
+  emailVerified DateTime?                          // Timestamp when email was verified (optional)
+  image         String?                            // User avatar/profile picture URL (optional)
+  password      String?                            // Hashed password (optional - OAuth users may not have passwords)
+  createdAt     DateTime  @default(now())          // Record creation timestamp
+  updatedAt     DateTime  @updatedAt               // Last update timestamp (auto-updated)
+
+  // Relationship fields - Define how this model relates to other models
+  accounts      Account[]                          // One user can have multiple linked accounts (for OAuth providers)
+  sessions      Session[]                          // One user can have multiple active sessions (for database-stored sessions)
+  projects      Project[]                          // One user can have multiple projects (chat sessions)
+}
+
+// Account model - Stores OAuth provider account information
+// This links users to their accounts on external providers (Google, GitHub, etc.)
+model Account {
+  id                String  @id @default(cuid())
+  userId            String                         // Foreign key referencing User.id
+  type              String                         // Account type (e.g., "oauth", "credentials")
+  provider          String                         // OAuth provider name (e.g., "google", "github")
+  providerAccountId String                         // User ID from the OAuth provider
+  refresh_token     String? @db.Text               // OAuth refresh token (can be very long)
+  access_token      String? @db.Text               // OAuth access token
+  expires_at        Int?                           // Access token expiration timestamp
+  token_type        String?                        // Token type (e.g., "Bearer")
+  scope             String?                        // OAuth authorization scope
+  id_token          String? @db.Text               // OpenID Connect ID token
+  session_state     String?                        // OAuth session state
+
+  // Define relationship with User model, with cascade delete
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Composite unique constraint: ensures one account per provider per user
+  @@unique([provider, providerAccountId])
+}
+
+// Session model - Stores user session information
+// Used when session strategy is set to "database" instead of "jwt"
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique                   // Unique session token
+  userId       String                             // Foreign key referencing User.id
+  expires      DateTime                           // Session expiration time
+  
+  // Define relationship with User model
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// VerificationToken model - Stores email verification tokens
+// Used for magic link authentication and email verification flows
+model VerificationToken {
+  identifier String                               // Usually an email address
+  token      String   @unique                     // Unique verification token
+  expires    DateTime                             // Token expiration time
+
+  // Composite unique constraint: ensures unique identifier-token combinations
+  @@unique([identifier, token])
+}
+
+// Project model - Represents a chat session/notebook project
+model Project {
+  id           String   @id @default(cuid())
+  name         String                              // Project/chat name
+  description  String?                             // Optional project description
+  userId       String                              // Foreign key referencing User.id
+  systemPrompt String?  @db.Text                  // Custom system prompt for AI behavior
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  lastUsedAt   DateTime @default(now())           // Track usage for sorting
+  usageCount   Int      @default(0)               // Track how many times it's been opened
+
+  // Relationships
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documents    Document[] // Documents uploaded to this project for RAG
+  messages     Message[]  // Chat messages in this project
+  vocabulary   VocabularyWord[] // Vocabulary words extracted from this project
+}
+
+// Document model - Stores uploaded documents for RAG functionality
+model Document {
+  id          String   @id @default(cuid())
+  name        String                              // Original filename
+  type        String                              // File type/extension
+  size        Int                                 // File size in bytes
+  content     String?  @db.Text                  // Extracted text content (optional for future use)
+  url         String?                             // File storage URL (if using external storage)
+  s3Key       String?  @unique                   // S3 object key for direct access
+  status      String   @default("UPLOADED")      // UPLOADED, PROCESSING, VECTORIZED, FAILED
+  projectId   String                              // Foreign key referencing Project.id
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationships
+  project     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+// VocabularyWord model - Stores extracted vocabulary terms
+model VocabularyWord {
+  id           String    @id @default(cuid())
+  term         String                             // The vocabulary term
+  definition   String    @db.Text                 // Definition of the term
+  projectId    String                             // Foreign key referencing Project.id
+  messageId    String?                            // Optional: source message ID
+  documentId   String?                            // Optional: source document ID
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Relationships
+  project      Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // Unique constraint to prevent duplicate terms in same project
+  @@unique([projectId, term])
+}
+
+// Message model - Stores chat messages
+model Message {
+  id           String    @id @default(cuid())
+  content      String    @db.Text                    // Message content
+  role         String                                // "user" or "assistant"
+  projectId    String                                // Foreign key referencing Project.id
+  isDeleted    Boolean   @default(false)             // Soft delete flag
+  deletedAt    DateTime?                             // When message was deleted
+  editHistory  Json?                                 // Array of previous versions for edit history
+  lastEditedAt DateTime?                             // Last edit timestamp
+  metadata     Json?                                 // Additional metadata (sources, images, etc.)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @default(now()) @updatedAt
+
+  // Relationships
+  project      Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
