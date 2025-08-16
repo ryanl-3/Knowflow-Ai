@@ -9,7 +9,8 @@ import { OpenAIEmbeddings } from '@langchain/openai';
 import { PineconeStore } from '@langchain/pinecone';
 import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
 import { Document } from 'langchain/document';
-import pdf from 'pdf-parse/lib/pdf-parse'
+// @ts-ignore
+import pdf from 'pdf-parse';
 
 export async function POST(
   request: NextRequest,
