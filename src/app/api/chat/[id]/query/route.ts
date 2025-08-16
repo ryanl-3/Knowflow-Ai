@@ -5,6 +5,7 @@ import prisma from '@/lib/prisma';
 import { Pinecone } from '@pinecone-database/pinecone';
 import { OpenAIEmbeddings } from '@langchain/openai';
 import { PineconeStore } from '@langchain/pinecone';
+import type { Index } from "@pinecone-database/pinecone";
 
 
 export async function POST(
@@ -69,7 +70,7 @@ export async function POST(
 
     // Cast index to any to satisfy type mismatch between packages
     const vectorStore = await PineconeStore.fromExistingIndex(embeddings, {
-      pineconeIndex: index as any,
+      pineconeIndex: index as Index,
       namespace: `project-${projectId}`,
     });
 

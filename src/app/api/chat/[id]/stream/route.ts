@@ -7,6 +7,7 @@ import { StreamChunk, DocumentSource } from '@/lib/types';
 import { Pinecone } from '@pinecone-database/pinecone';
 import { OpenAIEmbeddings } from '@langchain/openai';
 import { PineconeStore } from '@langchain/pinecone';
+import type { Index } from "@pinecone-database/pinecone";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
@@ -93,7 +94,7 @@ export async function POST(
           const embeddings = new OpenAIEmbeddings({ openAIApiKey: process.env.OPENAI_API_KEY! });
 
           const vectorStore = await PineconeStore.fromExistingIndex(embeddings, {
-            pineconeIndex: index as any,
+            pineconeIndex: index as Index,
             namespace: `project-${projectId}`,
           });
 
