@@ -46,11 +46,13 @@ export const useSSEChat = ({ projectId, initialMessages = [] }: UseSSEChatOption
 
     // Add user message immediately
     const userMessage: Message = {
-      id: generateSessionId() + '_user',
+      id: `${generateSessionId()}_user`,
       role: 'user',
       content: content.trim(),
-      images: options.images,
+      images: options.images ?? [],
+      projectId,                 // <-- make sure this variable exists
       createdAt: new Date(),
+      updatedAt: new Date(),     // usually same as createdAt at creation time
     };
 
     setState(prev => ({
@@ -137,14 +139,16 @@ export const useSSEChat = ({ projectId, initialMessages = [] }: UseSSEChatOption
                   case 'done':
                     // Create final assistant message
                     const assistantMessage: Message = {
-                      id: generateSessionId() + '_assistant',
+                      id: `${generateSessionId()}_assistant`,
                       role: 'assistant',
                       content: fullAssistantContent,
                       metadata: {
                         sources: currentSources,
                         timestamp: new Date().toISOString(),
                       },
+                      projectId,               // <-- make sure this variable exists in scope
                       createdAt: new Date(),
+                      updatedAt: new Date(),
                     };
 
                     setState(prev => ({
