@@ -12,23 +12,9 @@ declare global {
 // Create a Prisma Client instance using the singleton pattern
 // In development: Store the instance on globalThis to prevent creating multiple instances during Hot Module Reloading (HMR)
 // In production: Create a new instance if globalThis.prisma doesn't exist
-// Determine the connection string. If a Fixie proxy database URL is provided,
-// use it so that database connections originate from a static IP.
-const connectionString =
-  process.env.FIXIE_DATABASE_URL || process.env.DATABASE_URL;
-
-const prisma = globalThis.prisma ||
-  new PrismaClient({
-    log:
-      process.env.NODE_ENV === 'development'
-        ? ['query', 'error', 'warn']
-        : ['error'],
-    datasources: {
-      db: {
-        url: connectionString,
-      },
-    },
-  });
+const prisma = globalThis.prisma || new PrismaClient({
+  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+});
 
 // In development, store the Prisma instance on globalThis to persist across hot reloads
 // This prevents the "Too many clients already" error in development
